@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claims-intake"
+version = "0.1.0"
+description = "Claims document intake pipeline: legacy fixed-width files, portal CSVs and scanned forms to validated FHIR Claims, with PHI-safe logs, a review queue, cost tracking and drift alerts"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+  "prefect>=3.4,<4",
+  "pydantic>=2.10,<3",
+  "fhir.resources>=8,<9",
+  "anthropic>=2.10,<3",
+  "pillow>=11",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[project.scripts]
+claims-intake = "claims_intake.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]  # the formatter wraps code; long strings stay readable

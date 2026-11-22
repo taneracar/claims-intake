@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests && ruff format --check src tests
+      - run: pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t claims-intake .
+      - name: Run the flow inside the container (offline extractor)
+        run: |
+          mkdir -p work && chmod 777 work
+          docker run --rm -v "$PWD/work:/work" claims-intake synth --out data
+          docker run --rm -v "$PWD/work:/work" claims-intake run --today 2026-11-21 | tee report.json
+          python3 - <<'PY'
+          import json
+          r = json.load(open("report.json"))
+          assert r["claims_by_decision"] == {"accepted": 8, "duplicate": 1, "rejected": 2, "review": 5}, r
+          assert r["batches_held"] == 1
+          print("container run OK")
+          PY
+          ls work/out/fhir | wc -l
